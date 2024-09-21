@@ -1,38 +1,46 @@
 import "./App.css";
 import { User, MessageCircle, X, Heart } from "lucide-react";
-import React, { useState } from "react";
-const ProfileSelector = () => {
-  return (
+import React, { useEffect, useState } from "react";
+
+const fetchRandomProfile = async () => {
+  const respone = await fetch("http://localhost:8080/profiles/random");
+  if (!respone.ok) {
+    throw new console.error("there is problem");
+  }
+  return respone.json();
+};
+
+const ProfileSelector = ({ profile, onSwipe }) => {
+  return profile ? (
     <div className="rounded-lg overflow-hidden bg-white shadow-lg">
       <div className="relative">
-        <img src="http://192.168.1.93:8081/017e4530-49b4-4937-8adf-985a82595d53.jpg" />
+        <img src={`http://192.168.1.93:8081/${profile.imageUrl}`} />
         <div className="absolute bottom-0 left-0 right-0 text-white">
           <h2 className="text-3xl font-bold p-4 bg-gradient-to-t from-black">
-            Roja,24
+            {profile.firstName} {profile.lastName},{profile.age}
           </h2>
         </div>
       </div>
       <div className="p-4">
-        <p className="">
-          I am heroine working in telugu film industry,looking for a opportunity
-          in hollywood.
-        </p>
+        <p className="">{profile.bio}</p>
       </div>
       <div className="p-4 flex justify-center space-x-6">
         <button
           className="bg-red-500 rounded-full p-4 text-white hover:bg-red-700"
-          onClick={() => console.log("swipe left")}
+          onClick={() => onSwipe("left")}
         >
           <X size={24} />
         </button>
         <button
           className="bg-green-500 rounded-full p-4 text-white hover:bg-green-700"
-          onClick={() => console.log("swipe right")}
+          onClick={() => onSwipe("right")}
         >
           <Heart size={24} />
         </button>
       </div>
     </div>
+  ) : (
+    <div>Loading...</div>
   );
 };
 
@@ -132,10 +140,30 @@ const ChatScreen = () => {
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState("profile");
+  const [currentProfile, setCurrentProfile] = useState(null);
+
+  const loadRandomProfile = async () => {
+    try {
+      const profile = await fetchRandomProfile();
+      setCurrentProfile(profile);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  const onSwipe = (direction) => {
+    if (direction === "right") {
+      console.log("liked");
+    }
+    loadRandomProfile();
+  };
+  useEffect(() => {
+    loadRandomProfile();
+  }, []);
+
   const renderScreen = () => {
     switch (currentScreen) {
       case "profile":
-        return <ProfileSelector />;
+        return <ProfileSelector profile={currentProfile} onSwipe={onSwipe} />;
       case "matches":
         return <MatchesList onSelectMatch={() => setCurrentScreen("chat")} />;
       case "chat":
