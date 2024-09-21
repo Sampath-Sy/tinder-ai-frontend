@@ -78,6 +78,55 @@ const MatchesList = () => {
   );
 };
 
+const ChatScreen = () => {
+  const [input, setInput] = useState("");
+  const handleSend = () => {
+    if (input.trim()) {
+      console.log(input);
+      setInput("");
+    }
+  };
+  return (
+    <div className="rounded-lg shadow-lg p-4">
+      <h2 className="text-2xl font-bold mb-4">Chat with roja</h2>
+      <div className="h-[50vh] border rounded overflow-y-auto mb-4 p-2">
+        {[
+          "hi",
+          "how are you",
+          "how are you",
+          "how are you",
+          "how are you",
+          "how are you",
+          "how are you",
+          "how are you",
+          "how are you",
+        ].map((message, index) => {
+          return (
+            <div key={index}>
+              <div className="mb-4 p-2 rounded bg-gray-100">{message}</div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type a message..."
+          className="border flex-1 rounded p-2 mr-2"
+        />
+        <button
+          onClick={handleSend}
+          className="bg-blue-500 text-white rounded p-2"
+        >
+          send
+        </button>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const [currentScreen, setCurrentScreen] = useState("profile");
   const renderScreen = () => {
@@ -86,6 +135,8 @@ function App() {
         return <ProfileSelector />;
       case "matches":
         return <MatchesList />;
+      case "chat":
+        return <ChatScreen />;
     }
   };
   return (
