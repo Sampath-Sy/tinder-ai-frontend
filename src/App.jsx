@@ -22,6 +22,23 @@ const saveSwipe = async (profileId) => {
     throw new Error("Failed to save swipe");
   }
 };
+const fetchMatcehs = async () => {
+  const respone = await fetch("http://localhost:8080/matches");
+  if (!respone.ok) {
+    throw new Error("failed to fetch the Matches");
+  }
+  return respone.json();
+};
+
+const fetchConversation = async (conversationId) => {
+  const respone = await fetch(
+    `http://localhost:8080/conversations/${conversationId}`
+  );
+  if (!respone.ok) {
+    throw new Error("failed to fetch the conversation");
+  }
+  return respone.json();
+};
 
 const ProfileSelector = ({ profile, onSwipe }) => {
   return profile ? (
@@ -57,40 +74,27 @@ const ProfileSelector = ({ profile, onSwipe }) => {
   );
 };
 
-const MatchesList = ({ onSelectMatch }) => {
+const MatchesList = ({ matches, onSelectMatch }) => {
   return (
     <div className="rounded-lg shadow-lg p-4">
       <h2 className="text-2xl font-bold mb-4">Matches</h2>
       <ul>
-        {[
-          {
-            id: 1,
-            firstName: "roja",
-            lastName: "rose",
-            imageUrl:
-              "http://192.168.1.93:8081/017e4530-49b4-4937-8adf-985a82595d53.jpg",
-          },
-          {
-            id: 2,
-            firstName: "daisy",
-            lastName: "dash",
-            imageUrl:
-              "http://192.168.1.93:8081/017e4530-49b4-4937-8adf-985a82595d53.jpg",
-          },
-        ].map((match) => {
+        {matches.map((match) => {
           return (
-            <li key={match.id} className="mb-2">
+            <li key={match.profile.id} className="mb-2">
               <button
-                onClick={onSelectMatch}
+                onClick={() =>
+                  onSelectMatch(match.profile, match.conversationId)
+                }
                 className="w-full hover:bg-gray-100 rounded flex items-center"
               >
                 <img
                   className="w-16 h-16 rounded-full mr-3"
-                  src={match.imageUrl}
+                  src={`http://192.168.1.93:8081/${match.profile.imageUrl}`}
                 />
                 <span>
                   <h3 className="font-bold">
-                    {match.firstName} {match.lastName}
+                    {match.profile.firstName} {match.profile.lastName}
                   </h3>
                 </span>
               </button>
@@ -102,7 +106,7 @@ const MatchesList = ({ onSelectMatch }) => {
   );
 };
 
-const ChatScreen = () => {
+const ChatScreen = ({ currentMatch, conversation }) => {
   const [input, setInput] = useState("");
   const handleSend = () => {
     if (input.trim()) {
@@ -110,24 +114,18 @@ const ChatScreen = () => {
       setInput("");
     }
   };
-  return (
+  return currentMatch ? (
     <div className="rounded-lg shadow-lg p-4">
-      <h2 className="text-2xl font-bold mb-4">Chat with roja</h2>
+      <h2 className="text-2xl font-bold mb-4">
+        Chat with {currentMatch.firstName} {currentMatch.lastName}
+      </h2>
       <div className="h-[50vh] border rounded overflow-y-auto mb-4 p-2">
-        {[
-          "hi",
-          "how are you",
-          "how are you",
-          "how are you",
-          "how are you",
-          "how are you",
-          "how are you",
-          "how are you",
-          "how are you",
-        ].map((message, index) => {
+        {conversation.map((message, index) => {
           return (
             <div key={index}>
-              <div className="mb-4 p-2 rounded bg-gray-100">{message}</div>
+              <div className="mb-4 p-2 rounded bg-gray-100">
+                {message.messageText}
+              </div>
             </div>
           );
         })}
@@ -148,12 +146,17 @@ const ChatScreen = () => {
         </button>
       </div>
     </div>
+  ) : (
+    <div>Loading...</div>
   );
 };
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState("profile");
   const [currentProfile, setCurrentProfile] = useState(null);
+  const [matches, setMatches] = useState([]);
+  const [currentMatchAndConversation, setCurrentMatchAndConversation] =
+    useState({ match: {}, conversation: [] });
 
   const loadRandomProfile = async () => {
     try {
@@ -163,14 +166,39 @@ function App() {
       console.error(error);
     }
   };
-  const onSwipe = (profileId, direction) => {
+
+  const loadMatches = async () => {
+    try {
+      const matches = await fetchMatcehs();
+      setMatches(matches);
+      console.log("matches", matches);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const onSwipe = async (profileId, direction) => {
     if (direction === "right") {
-      saveSwipe(profileId);
+      await saveSwipe(profileId);
+      await loadMatches();
     }
     loadRandomProfile();
   };
+  const onSelectMatch = async (profile, conversationId) => {
+    try {
+      const conversation = await fetchConversation(conversationId);
+      setCurrentMatchAndConversation({
+        match: profile,
+        conversation: conversation.messages,
+      });
+      setCurrentScreen("chat");
+    } catch (error) {
+      console.error(error);
+    }
+  };
   useEffect(() => {
     loadRandomProfile();
+    loadMatches();
   }, []);
 
   const renderScreen = () => {
@@ -178,9 +206,14 @@ function App() {
       case "profile":
         return <ProfileSelector profile={currentProfile} onSwipe={onSwipe} />;
       case "matches":
-        return <MatchesList onSelectMatch={() => setCurrentScreen("chat")} />;
+        return <MatchesList matches={matches} onSelectMatch={onSelectMatch} />;
       case "chat":
-        return <ChatScreen />;
+        return (
+          <ChatScreen
+            currentMatch={currentMatchAndConversation.match}
+            conversation={currentMatchAndConversation.conversation}
+          />
+        );
     }
   };
   return (
